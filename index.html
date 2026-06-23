@@ -178,8 +178,8 @@ tr:nth-child(even){background-color: #f9f9f9;}
                 <tr>
                     <th>Họ và Tên</th>
                     <th>Số lần làm bài</th>
-                    <th>Kết quả làm bài</th>
-                    <th>Thời gian làm bài</th>
+                    <th>Kết quả làm bài (Đúng/Tổng)</th>
+                    <th>Thời gian nộp cuối cùng</th>
                 </tr>
             </thead>
             <tbody id="analyticsTableBody">
@@ -239,7 +239,6 @@ async function loadQuestionsFromDatabase() {
             if (data && Object.keys(data).length > 0) {
                 questions = Object.keys(data).map(key => ({id: key, ...data[key]}));
             } else {
-                // Nếu Firebase trống, dùng ngay bộ từ mặc định để không lỗi trang
                 questions = [...defaultQuestions];
             }
         } else {
@@ -248,8 +247,6 @@ async function loadQuestionsFromDatabase() {
     } catch (e) { 
         questions = [...defaultQuestions]; 
     }
-    
-    // Đảm bảo cập nhật giao diện chính xác sau khi tải xong dữ liệu trực tuyến
     let countEl = document.getElementById("totalQuestCount");
     if(countEl) countEl.innerText = questions.length;
     renderVocabList();
@@ -419,38 +416,53 @@ async function deleteAllQuestions() {
     }
 }
 
+// --- ĐÃ SỬA LỖI TẬN GỐC HÀM ANALYTICS CHỐNG SẬP GIAO DIỆN ---
 async function loadAnalytics() {
+    let tbody = document.getElementById("analyticsTableBody");
+    if(!tbody) return;
+    
     try {
         let res = await fetch(`${FIREBASE_URL}/analytics.json`);
         let data = await res.json();
-        let tbody = document.getElementById("analyticsTableBody");
         if(!data) { tbody.innerHTML = "<tr><td colspan='4'>Chưa có dữ liệu học sinh làm bài.</td></tr>"; return; }
         
         let studentSummary = {};
         Object.keys(data).forEach(key => {
             let item = data[key];
-            if(!studentSummary[item.name]) { studentSummary[item.name] = { count: 0, correct: 0, wrong: 0, lastTime: "" }; }
-            studentSummary[item.name].count += 1;
-            studentSummary[item.name].correct = item.correct; 
-            studentSummary[item.name].wrong = item.wrong;     
-            studentSummary[item.name].lastTime = item.time;
+            if (item && item.name) {
+                // Tạo khuôn mẫu bảo vệ an toàn dữ liệu, nếu thiếu dữ liệu sẽ gán mặc định là 0
+                if(!studentSummary[item.name]) { 
+                    studentSummary[item.name] = { count: 0, correct: 0, wrong: 0, lastTime: "" }; 
+                }
+                let c = Number(item.correct) || 0;
+                let w = Number(item.wrong) || 0;
+                
+                studentSummary[item.name].count += 1;
+                // Cộng dồn lũy tiến chứ không ghi đè mất kết quả cũ
+                studentSummary[item.name].correct += c; 
+                studentSummary[item.name].wrong += w;     
+                studentSummary[item.name].lastTime = item.time || "Không rõ";
+            }
         });
         
         let html = "";
         Object.keys(studentSummary).forEach(name => {
             let s = studentSummary[name];
-            let totalQuestionsPerStudent = s.correct + s.wrong; 
+            let total = s.correct + s.wrong; 
             html += `<tr>
                 <td><b>${name}</b></td>
                 <td>${s.count} lần</td>
                 <td style="color:#2C3E50; font-weight:bold;">
-                    <span style="color:#9ABF17;">${s.correct}</span> / <span>${totalQuestionsPerStudent}</span> câu
+                    <span style="color:#9ABF17;">${s.correct}</span> / <span>${total}</span> câu
                 </td>
                 <td>${s.lastTime}</td>
             </tr>`;
         });
         tbody.innerHTML = html;
-    } catch(err) { console.log(err); }
+    } catch(err) { 
+        console.error("Lỗi đồng bộ bảng: ", err);
+        tbody.innerHTML = "<tr><td colspan='4' style='color:red;'>Lỗi đồng bộ dữ liệu với Firebase.</td></tr>"; 
+    }
 }
 
 async function clearAnalytics() {
@@ -468,7 +480,6 @@ function launchFireworks(){
     }
 }
 
-// Khởi chạy đồng bộ ngay lập tức giao diện tĩnh để chống treo
 document.getElementById("totalQuestCount").innerText = questions.length;
 renderVocabList();
 loadQuestionsFromDatabase();
