@@ -193,7 +193,7 @@ tr:nth-child(even){background-color: #f9f9f9;}
 <audio id="wrongSound" preload="auto"><source src="wrong.mp3" type="audio/mpeg"></audio>
 
 <script>
-const FIREBASE_URL = "https://grade-6-vocab-check-teachers-default-rtdb.firebaseio.com/"; 
+const FIREBASE_URL = "https://grade-6-vocab-check-teachers-default-rtdb.firebaseio.com"; 
 
 const defaultQuestions = [
     {vietnamese:"cơ sở vật chất",english:"facilities"},
@@ -236,13 +236,20 @@ async function loadQuestionsFromDatabase() {
         let res = await fetch(`${FIREBASE_URL}/questions.json`);
         if(res.ok) {
             let data = await res.json();
-            if (data) {
+            if (data && Object.keys(data).length > 0) {
                 questions = Object.keys(data).map(key => ({id: key, ...data[key]}));
+            } else {
+                // Nếu Firebase trống, dùng ngay bộ từ mặc định để không lỗi trang
+                questions = [...defaultQuestions];
             }
+        } else {
+            questions = [...defaultQuestions];
         }
     } catch (e) { 
         questions = [...defaultQuestions]; 
     }
+    
+    // Đảm bảo cập nhật giao diện chính xác sau khi tải xong dữ liệu trực tuyến
     let countEl = document.getElementById("totalQuestCount");
     if(countEl) countEl.innerText = questions.length;
     renderVocabList();
@@ -250,6 +257,7 @@ async function loadQuestionsFromDatabase() {
 
 async function goToStudentLogin() {
     showScreen('startScreen');
+    document.getElementById("studentNotice").innerHTML = "Đang đồng bộ số lượng từ vựng trực tuyến...";
     await loadQuestionsFromDatabase();
     document.getElementById("studentNotice").innerHTML = `Hệ thống đã sẵn sàng! Đang có bài kiểm tra gồm: <b style="color:#BA1B18; font-size:20px;">${questions.length} từ vựng</b>.`;
 }
@@ -276,6 +284,11 @@ function shuffleArray(array){
 function startGame(){
     studentName = document.getElementById("studentName").value.trim();
     if(studentName===""){alert("Please type your name!");return;}
+    if(questions.length === 0) { alert("Không có câu hỏi nào để bắt đầu!"); return; }
+    
+    currentQuestion = 0;
+    score = 0;
+    totalWrong = 0;
     shuffleArray(questions);
     showScreen('quizScreen');
     isPlaying = true; 
@@ -294,6 +307,7 @@ function startTimer() {
 }
 
 function loadQuestion(){
+    if (currentQuestion >= questions.length) { finishQuiz(); return; }
     document.getElementById("questionCounter").innerHTML="Question "+(currentQuestion+1)+" / "+questions.length;
     document.getElementById("questionBox").innerHTML=questions[currentQuestion].vietnamese;
     document.getElementById("progressBar").style.width=((currentQuestion/questions.length)*100)+"%";
@@ -333,6 +347,7 @@ function checkAnswer(){
 }
 
 function nextQuestion(){
+    if (!isPlaying) return;
     const answer=document.getElementById("answerInput").value.trim().toLowerCase();
     if(answer===questions[currentQuestion].english) { score++; } else { totalWrong++; }
     currentQuestion++;
@@ -368,9 +383,10 @@ function renderVocabList() {
         container.innerHTML = "<p style='color:#666; padding: 10px;'>Ngân hàng trống.</p>"; return;
     }
     questions.forEach((q, index) => {
+        let qId = q.id ? q.id : index;
         html += `<div class="vocab-item">
             <span>${index+1}. <b>${q.vietnamese}</b>: ${q.english}</span>
-            <button onclick="deleteQuestion('${q.id}')" style="background:#BA1B18; padding:3px 10px; font-size:14px; margin:0;">Xóa</button>
+            <button onclick="deleteQuestion('${qId}')" style="background:#BA1B18; padding:3px 10px; font-size:14px; margin:0;">Xóa</button>
         </div>`;
     });
     container.innerHTML = html;
@@ -430,7 +446,7 @@ async function loadAnalytics() {
                 <td style="color:#2C3E50; font-weight:bold;">
                     <span style="color:#9ABF17;">${s.correct}</span> / <span>${totalQuestionsPerStudent}</span> câu
                 </td>
-                <td>thời gian làm bài: ${s.lastTime}</td>
+                <td>${s.lastTime}</td>
             </tr>`;
         });
         tbody.innerHTML = html;
@@ -452,7 +468,7 @@ function launchFireworks(){
     }
 }
 
-// KHỞI TẠO GIAO DIỆN TĨNH NGAY LẬP TỨC ĐỂ TRÁNH TREO TRANG
+// Khởi chạy đồng bộ ngay lập tức giao diện tĩnh để chống treo
 document.getElementById("totalQuestCount").innerText = questions.length;
 renderVocabList();
 loadQuestionsFromDatabase();
