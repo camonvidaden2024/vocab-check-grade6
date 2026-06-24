@@ -99,7 +99,7 @@ th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 18p
 th { background-color: #4A90E2; color: white; }
 tr:nth-child(even){background-color: #f9f9f9;}
 .vocab-list { max-height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #fff; border-radius: 8px; text-align: left; margin-bottom: 20px; }
-.vocab-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 18px; }
+.vocab-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 18px; align-items: center;}
 .firework{
     position:fixed;
     font-size:40px;
@@ -163,8 +163,8 @@ tr:nth-child(even){background-color: #f9f9f9;}
     
     <div style="background:#eef5fc; padding:20px; border-radius:10px; text-align:left;">
         <h3 style="margin-top:0;">Thêm từ vựng mới:</h3>
-        <input type="text" id="newViet" placeholder="Nghĩa tiếng Việt (Ví dụ: quả táo)" style="width:95%;">
-        <input type="text" id="newEng" placeholder="Từ tiếng Anh (Ví dụ: apple)" style="width:95%;">
+        <input type="text" id="newViet" placeholder="Nghĩa tiếng Việt (Ví dụ: cơ sở vật chất)" style="width:95%;">
+        <input type="text" id="newEng" placeholder="Các đáp án tiếng Anh - cách nhau bằng dấu phẩy (Ví dụ: facilities, infrastructure)" style="width:95%;">
         <button class="btn-teacher" onclick="addQuestion()" style="margin-top:10px;">Thêm Vào Hệ Thống</button>
     </div>
 
@@ -230,6 +230,12 @@ const defaultQuestions = [
 
 let questions = [...defaultQuestions];
 let currentQuestion=0, score=0, totalWrong=0, timeLeft=60, timer, lastState="", isPlaying=false, studentName="";
+
+// Hàm hỗ trợ tách chuỗi đáp án thành mảng để so khớp
+function getAcceptedAnswers(englishString) {
+    if(!englishString) return [];
+    return englishString.split(',').map(ans => ans.trim().toLowerCase()).filter(ans => ans !== "");
+}
 
 async function loadQuestionsFromDatabase() {
     try {
@@ -314,13 +320,18 @@ function loadQuestion(){
     input.focus(); startTimer();
 }
 
+// HÀM KIỂM TRA ĐÁP ÁN: Đã nâng cấp xử lý ĐA ĐÁP ÁN
 function checkAnswer(){
     const input=document.getElementById("answerInput");
     const answer=input.value.trim().toLowerCase();
     const feedback=document.getElementById("feedback");
     if(answer===""){ input.classList.remove("correct","wrong"); feedback.innerHTML=""; return; }
 
-    if(answer===questions[currentQuestion].english){
+    // Tách danh sách các đáp án đúng được chấp nhận
+    let validAnswers = getAcceptedAnswers(questions[currentQuestion].english);
+
+    // Học sinh gõ trúng 1 trong các đáp án hợp lệ thì tính là đúng
+    if(validAnswers.includes(answer)){
         input.classList.add("correct"); input.classList.remove("wrong");
         feedback.innerHTML="✔"; feedback.className="correctMark";
         if(lastState!=="correct"){ 
@@ -346,7 +357,9 @@ function checkAnswer(){
 function nextQuestion(){
     if (!isPlaying) return;
     const answer=document.getElementById("answerInput").value.trim().toLowerCase();
-    if(answer===questions[currentQuestion].english) { score++; } else { totalWrong++; }
+    let validAnswers = getAcceptedAnswers(questions[currentQuestion].english);
+
+    if(validAnswers.includes(answer)) { score++; } else { totalWrong++; }
     currentQuestion++;
     if(currentQuestion >= questions.length){ finishQuiz(); return; }
     loadQuestion();
@@ -381,8 +394,10 @@ function renderVocabList() {
     }
     questions.forEach((q, index) => {
         let qId = q.id ? q.id : index;
+        // Hiển thị định dạng trực quan cho GV dễ nhìn thấy các từ đồng nghĩa
+        let displayEng = q.english.split(',').map(t => t.trim()).join(' / ');
         html += `<div class="vocab-item">
-            <span>${index+1}. <b>${q.vietnamese}</b>: ${q.english}</span>
+            <span>${index+1}. <b>${q.vietnamese}</b>: <span style="color:#4A90E2;">${displayEng}</span></span>
             <button onclick="deleteQuestion('${qId}')" style="background:#BA1B18; padding:3px 10px; font-size:14px; margin:0;">Xóa</button>
         </div>`;
     });
@@ -394,6 +409,7 @@ async function addQuestion() {
     let e = document.getElementById("newEng").value.trim();
     if(!v || !e) { alert("Vui lòng điền đủ nghĩa từ!"); return; }
     try {
+        // Lưu nguyên chuỗi thô chứa dấu phẩy lên Firebase
         await fetch(`${FIREBASE_URL}/questions.json`, { method: 'POST', body: JSON.stringify({ vietnamese: v, english: e.toLowerCase() }) });
         document.getElementById("newViet").value = ""; document.getElementById("newEng").value = "";
     } catch(err){}
@@ -416,7 +432,6 @@ async function deleteAllQuestions() {
     }
 }
 
-// --- ĐÃ SỬA LỖI TẬN GỐC HÀM ANALYTICS CHỐNG SẬP GIAO DIỆN ---
 async function loadAnalytics() {
     let tbody = document.getElementById("analyticsTableBody");
     if(!tbody) return;
@@ -430,7 +445,6 @@ async function loadAnalytics() {
         Object.keys(data).forEach(key => {
             let item = data[key];
             if (item && item.name) {
-                // Tạo khuôn mẫu bảo vệ an toàn dữ liệu, nếu thiếu dữ liệu sẽ gán mặc định là 0
                 if(!studentSummary[item.name]) { 
                     studentSummary[item.name] = { count: 0, correct: 0, wrong: 0, lastTime: "" }; 
                 }
@@ -438,7 +452,6 @@ async function loadAnalytics() {
                 let w = Number(item.wrong) || 0;
                 
                 studentSummary[item.name].count += 1;
-                // Cộng dồn lũy tiến chứ không ghi đè mất kết quả cũ
                 studentSummary[item.name].correct += c; 
                 studentSummary[item.name].wrong += w;     
                 studentSummary[item.name].lastTime = item.time || "Không rõ";
@@ -460,7 +473,6 @@ async function loadAnalytics() {
         });
         tbody.innerHTML = html;
     } catch(err) { 
-        console.error("Lỗi đồng bộ bảng: ", err);
         tbody.innerHTML = "<tr><td colspan='4' style='color:red;'>Lỗi đồng bộ dữ liệu với Firebase.</td></tr>"; 
     }
 }
