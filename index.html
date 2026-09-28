@@ -57,11 +57,27 @@ button{
 button:hover { background: #e08582; }
 .btn-teacher { background: #4A90E2; }
 .btn-teacher:hover { background: #357ABD; }
+
+/* Header góc trên cho Quiz: Đếm ngược bên trái, Số câu đúng bên phải */
+.quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
 #timer{
-    font-size:42px;
+    font-size:28px;
     color:#BA1B18;
     font-weight:bold;
+    text-align: left;
 }
+#scoreCounter{
+    font-size:28px;
+    color:#4A90E2;
+    font-weight:bold;
+    text-align: right;
+}
+
 #progressContainer{
     width:100%;
     height:22px;
@@ -211,7 +227,11 @@ tr:nth-child(even){background-color: #f9f9f9;}
 </div>
 
 <div id="quizScreen" class="screen hidden">
-    <div id="timer">Time Left: 30s</div>
+    <div class="quiz-header">
+        <div id="timer">Time Left: 30s</div>
+        <div id="scoreCounter">0/0</div>
+    </div>
+    
     <div id="progressContainer"><div id="progressBar"></div></div>
     <div id="questionCounter"></div>
     
@@ -457,6 +477,9 @@ function loadQuestion(){
     isChecked = false;
     selectedMcqAnswer = "";
     document.getElementById("questionCounter").innerHTML="Question "+(currentQuestion+1)+" / "+questions.length;
+    
+    // Cập nhật số câu làm đúng / tổng số câu ở góc trên bên phải
+    document.getElementById("scoreCounter").innerText = score + "/" + questions.length;
     
     let currentData = questions[currentQuestion];
     let imgContainer = document.getElementById("imageContainer");
