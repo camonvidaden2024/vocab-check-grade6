@@ -25,7 +25,7 @@ body{
     text-align:center;
     margin: 20px;
 }
-.hidden{display:none;}
+.hidden{display:none !important;}
 h1{
     font-size:52px;
     color:white;
@@ -157,6 +157,26 @@ tr:nth-child(even){background-color: #f9f9f9;}
         opacity: 0;
     }
 }
+
+/* STYLE MỚI CHO TRẮC NGHIỆM */
+.mcq-btn {
+    width: 48%; 
+    padding: 15px 10px; 
+    font-size: 20px; 
+    border-radius: 10px; 
+    border: 2px solid #ccc; 
+    background: white; 
+    cursor: pointer; 
+    font-family:"Times New Roman",serif; 
+    transition: 0.2s;
+    color: black;
+    margin-top: 5px;
+    box-sizing: border-box;
+}
+.mcq-btn:hover { background: #f0f0f0; }
+.mcq-btn.selected { background: #F99895; color: white; border-color: #F99895; }
+.mcq-btn.correct-mcq { background: #9ABF17 !important; color: white; border-color: #9ABF17; }
+.mcq-btn.wrong-mcq { background: #BA1B18 !important; color: white; border-color: #BA1B18; }
 </style>
 </head>
 <body>
@@ -191,7 +211,14 @@ tr:nth-child(even){background-color: #f9f9f9;}
     <div id="questionBox"></div>
     
     <div id="feedback"></div>
+
+    <!-- Ô nhập dành cho tự luận -->
     <input type="text" id="answerInput" placeholder="Type your answer...">
+    
+    <!-- Khu vực 4 đáp án dành cho trắc nghiệm (ẩn mặc định) -->
+    <div id="mcqContainer" class="hidden" style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; margin-bottom:15px; width: 90%; margin-left: auto; margin-right: auto;">
+    </div>
+
     <br>
     <button id="actionBtn" onclick="handleActionButton()">OK</button>
 </div>
@@ -221,8 +248,26 @@ tr:nth-child(even){background-color: #f9f9f9;}
     
     <div style="background:#eef5fc; padding:20px; border-radius:10px; text-align:left;">
         <h3 style="margin-top:0;">Thêm từ vựng mới:</h3>
+        
+        <!-- THÊM: Tùy chọn loại câu hỏi -->
+        <select id="newType" onchange="toggleQuestionType()" style="width:95%; margin-bottom: 15px;">
+            <option value="text">Loại: Học sinh nhập đáp án (Tự luận)</option>
+            <option value="mcq">Loại: Chọn 1 trong 4 (Trắc nghiệm)</option>
+        </select>
+
         <input type="text" id="newViet" placeholder="Nghĩa tiếng Việt (Ví dụ: lính cứu hỏa)" style="width:95%;">
+        
+        <!-- Tự luận -->
         <input type="text" id="newEng" placeholder="Các đáp án tiếng Anh - cách nhau bằng dấu phẩy (Ví dụ: firefighter)" style="width:95%;">
+        
+        <!-- Trắc nghiệm (Bị ẩn nếu đang chọn Tự luận) -->
+        <div id="mcqInputs" class="hidden">
+            <input type="text" id="opt1" placeholder="Nhập Đáp Án ĐÚNG (A)" style="width:95%; border-color:#9ABF17; background:#f9fff9;">
+            <input type="text" id="opt2" placeholder="Nhập Đáp Án SAI (B)" style="width:95%;">
+            <input type="text" id="opt3" placeholder="Nhập Đáp Án SAI (C)" style="width:95%;">
+            <input type="text" id="opt4" placeholder="Nhập Đáp Án SAI (D)" style="width:95%;">
+        </div>
+
         <input type="text" id="newImg" placeholder="Link/URL hình ảnh (Tùy chọn - Ví dụ: https://example.com/firefighter.jpg)" style="width:95%;">
         <button class="btn-teacher" onclick="addQuestion()" style="margin-top:10px;">Thêm Vào Hệ Thống</button>
     </div>
@@ -256,7 +301,6 @@ tr:nth-child(even){background-color: #f9f9f9;}
 <script>
 const FIREBASE_URL = "https://grade-6-vocab-check-teachers-default-rtdb.firebaseio.com"; 
 
-// Thêm thuộc tính image vào từ vựng (ví dụ minh họa)
 const defaultQuestions = [
     {vietnamese:"cơ sở vật chất", english:"facilities", image:""},
     {vietnamese:"lính cứu hỏa", english:"firefighter", image:"https://images.unsplash.com/photo-1558611848-73f7eb4001a1?w=400"},
@@ -293,6 +337,19 @@ const defaultQuestions = [
 let questions = [...defaultQuestions];
 let currentQuestion=0, score=0, totalWrong=0, timeLeft=30, timer, isPlaying=false, studentName="";
 let isChecked = false;
+let selectedMcqAnswer = ""; // THÊM: Biến lưu đáp án trắc nghiệm học sinh đang chọn
+
+// THÊM: Hàm ẩn/hiện loại câu hỏi trên form Giáo viên
+function toggleQuestionType() {
+    let type = document.getElementById("newType").value;
+    if(type === "mcq") {
+        document.getElementById("mcqInputs").classList.remove("hidden");
+        document.getElementById("newEng").classList.add("hidden");
+    } else {
+        document.getElementById("mcqInputs").classList.add("hidden");
+        document.getElementById("newEng").classList.remove("hidden");
+    }
+}
 
 function getAcceptedAnswers(englishString) {
     if(!englishString) return [];
@@ -395,18 +452,17 @@ function startTimer() {
 function loadQuestion(){
     if (currentQuestion >= questions.length) { finishQuiz(); return; }
     isChecked = false;
+    selectedMcqAnswer = ""; // Đặt lại lựa chọn MCQ
     document.getElementById("questionCounter").innerHTML="Question "+(currentQuestion+1)+" / "+questions.length;
     
     let currentData = questions[currentQuestion];
     let imgContainer = document.getElementById("imageContainer");
     let imgEl = document.getElementById("questionImage");
     
-    // Kiểm tra xem câu hỏi có ảnh hay không
     if (currentData.image && currentData.image.trim() !== "") {
         imgEl.src = currentData.image;
         imgContainer.classList.remove("hidden");
-        // Nếu có ảnh, có thể gợi ý bằng tiếng Việt hoặc ẩn bớt
-        document.getElementById("questionBox").innerHTML = currentData.vietnamese ? `(${currentData.vietnamese})` : "Look at the picture and write the word:";
+        document.getElementById("questionBox").innerHTML = currentData.vietnamese ? `(${currentData.vietnamese})` : "Look at the picture and choose/write the word:";
     } else {
         imgContainer.classList.add("hidden");
         imgEl.src = "";
@@ -415,15 +471,44 @@ function loadQuestion(){
     
     document.getElementById("progressBar").style.width=((currentQuestion/questions.length)*100)+"%";
     
-    let input=document.getElementById("answerInput");
-    input.value=""; 
-    input.readOnly = false;
-    input.classList.remove("correct","wrong");
+    let input = document.getElementById("answerInput");
+    let mcqContainer = document.getElementById("mcqContainer");
+    
+    // THÊM LOGIC PHÂN LOẠI HIỂN THỊ: MCQ HOẶC TỰ LUẬN
+    if(currentData.type === "mcq") {
+        input.classList.add("hidden"); // Ẩn ô text
+        mcqContainer.classList.remove("hidden"); // Hiện 4 nút
+        mcqContainer.innerHTML = ""; // Xóa dữ liệu cũ
+        
+        let opts = [...currentData.options];
+        shuffleArray(opts); // Tráo đổi vị trí 4 đáp án
+        
+        opts.forEach(opt => {
+            let btn = document.createElement("button");
+            btn.className = "mcq-btn";
+            btn.innerText = opt;
+            btn.onclick = function() {
+                if(isChecked) return;
+                // Bỏ chọn nút khác, highlight nút này
+                document.querySelectorAll('.mcq-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedMcqAnswer = opt.toLowerCase();
+            };
+            mcqContainer.appendChild(btn);
+        });
+    } else {
+        // Tự luận bình thường
+        input.classList.remove("hidden");
+        mcqContainer.classList.add("hidden");
+        input.value=""; 
+        input.readOnly = false;
+        input.classList.remove("correct","wrong");
+        input.focus(); 
+    }
     
     document.getElementById("feedback").innerHTML=""; 
     document.getElementById("actionBtn").innerText = "OK";
     
-    input.focus(); 
     startTimer();
 }
 
@@ -439,23 +524,51 @@ function checkAnswer(){
     clearInterval(timer);
     isChecked = true;
     
-    const input = document.getElementById("answerInput");
-    input.readOnly = true;
-    const answer = input.value.trim().toLowerCase();
+    let currentData = questions[currentQuestion];
     const feedback = document.getElementById("feedback");
-    let validAnswers = getAcceptedAnswers(questions[currentQuestion].english);
+    let isCorrect = false;
 
-    if(validAnswers.includes(answer)){
+    // THÊM LOGIC CHẤM ĐIỂM DỰA TRÊN LOẠI CÂU HỎI
+    if(currentData.type === "mcq") {
+        let correctAns = currentData.english.toLowerCase();
+        if(selectedMcqAnswer === correctAns) {
+            isCorrect = true;
+        }
+        
+        // Hiện màu Xanh/Đỏ cho 4 nút trắc nghiệm
+        document.querySelectorAll('.mcq-btn').forEach(b => {
+            let btnVal = b.innerText.toLowerCase();
+            if(btnVal === correctAns) {
+                b.classList.add('correct-mcq'); // Đáp án đúng tô màu xanh
+            } else if (b.classList.contains('selected') && btnVal !== correctAns) {
+                b.classList.add('wrong-mcq'); // Nút học sinh lỡ chọn sai thì tô đỏ
+            }
+            b.disabled = true; 
+        });
+
+    } else {
+        const input = document.getElementById("answerInput");
+        input.readOnly = true;
+        const answer = input.value.trim().toLowerCase();
+        let validAnswers = getAcceptedAnswers(currentData.english);
+
+        if(validAnswers.includes(answer)){
+            isCorrect = true;
+            input.classList.add("correct"); 
+            input.classList.remove("wrong");
+        } else {
+            input.classList.add("wrong"); 
+            input.classList.remove("correct");
+        }
+    }
+
+    if(isCorrect){
         score++;
-        input.classList.add("correct"); 
-        input.classList.remove("wrong");
         feedback.innerHTML = "✔"; 
         feedback.className = "correctMark";
         playSound("correctSound");
     } else {
         totalWrong++;
-        input.classList.add("wrong"); 
-        input.classList.remove("correct");
         feedback.innerHTML = "✖"; 
         feedback.className = "wrongMark";
         playSound("wrongSound");
@@ -522,7 +635,15 @@ function renderVocabList() {
     }
     questions.forEach((q, index) => {
         let qId = q.id ? q.id : index;
-        let displayEng = q.english.split(',').map(t => t.trim()).join(' / ');
+        
+        // THÊM: Nếu là trắc nghiệm, hiển thị đáp án theo kiểu mới ở Dashboard GV
+        let displayEng = "";
+        if (q.type === 'mcq') {
+            displayEng = `<span style="color:#E67E22;">[Trắc nghiệm] Đ/Á Đúng: <b>${q.english}</b></span>`;
+        } else {
+            displayEng = q.english.split(',').map(t => t.trim()).join(' / ');
+        }
+        
         let imgTag = q.image ? `<img src="${q.image}" class="vocab-thumb" alt="thumb">` : '';
         
         html += `<div class="vocab-item">
@@ -538,20 +659,45 @@ function renderVocabList() {
 
 async function addQuestion() {
     let v = document.getElementById("newViet").value.trim();
-    let e = document.getElementById("newEng").value.trim();
     let img = document.getElementById("newImg").value.trim();
-    
-    if(!e) { alert("Vui lòng điền ít nhất đáp án tiếng Anh!"); return; }
-    if(!v && !img) { alert("Vui lòng điền nghĩa tiếng Việt HOẶC link hình ảnh!"); return; }
+    let type = document.getElementById("newType").value;
+
+    let newEntry = { vietnamese: v, image: img, type: type };
+
+    // Xử lý lưu tuỳ thuộc vào loại câu hỏi giáo viên chọn
+    if (type === "text") {
+        let e = document.getElementById("newEng").value.trim();
+        if(!e) { alert("Vui lòng điền ít nhất đáp án tiếng Anh!"); return; }
+        if(!v && !img) { alert("Vui lòng điền nghĩa tiếng Việt HOẶC link hình ảnh!"); return; }
+        newEntry.english = e.toLowerCase();
+    } else if (type === "mcq") {
+        let o1 = document.getElementById("opt1").value.trim();
+        let o2 = document.getElementById("opt2").value.trim();
+        let o3 = document.getElementById("opt3").value.trim();
+        let o4 = document.getElementById("opt4").value.trim();
+        if(!o1 || !o2 || !o3 || !o4) { alert("Vui lòng điền đủ 4 đáp án cho câu trắc nghiệm!"); return; }
+        if(!v && !img) { alert("Vui lòng điền nghĩa tiếng Việt HOẶC link hình ảnh!"); return; }
+        
+        newEntry.english = o1.toLowerCase(); // o1 luôn là đáp án đúng khi lưu
+        newEntry.options = [o1, o2, o3, o4]; // Lưu mảng 4 đáp án để lát nữa tráo đổi lúc xuất
+    }
 
     try {
         await fetch(`${FIREBASE_URL}/questions.json`, { 
             method: 'POST', 
-            body: JSON.stringify({ vietnamese: v, english: e.toLowerCase(), image: img }) 
+            body: JSON.stringify(newEntry) 
         });
+        
+        // Clear inputs
         document.getElementById("newViet").value = ""; 
         document.getElementById("newEng").value = "";
         document.getElementById("newImg").value = "";
+        document.getElementById("opt1").value = "";
+        document.getElementById("opt2").value = "";
+        document.getElementById("opt3").value = "";
+        document.getElementById("opt4").value = "";
+        
+        alert("Đã thêm từ vựng thành công!");
     } catch(err){}
     await loadQuestionsFromDatabase();
 }
@@ -734,6 +880,7 @@ renderVocabList();
 loadQuestionsFromDatabase();
 
 document.addEventListener("keypress",function(e){
+    // Hỗ trợ phím Enter để nộp bài
     if(e.key==="Enter" && !document.getElementById("quizScreen").classList.contains("hidden")){ 
         handleActionButton(); 
     }
