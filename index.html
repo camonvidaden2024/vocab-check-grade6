@@ -32,7 +32,8 @@ h1{
     text-shadow:3px 3px 5px rgba(0,0,0,.25);
     margin-top: 0;
 }
-input, select{
+input,
+select{
     width:80%;
     padding:14px;
     font-size:22px;
@@ -82,7 +83,6 @@ button:hover { background: #e08582; }
     margin:20px 0;
 }
 
-/* Thêm style cho khung chứa ảnh câu hỏi */
 .question-image-container {
     margin: 15px 0;
 }
@@ -108,15 +108,27 @@ button:hover { background: #e08582; }
     color:#9ABF17;
     font-weight:bold;
 }
-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
-th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 18px; }
-th { background-color: #4A90E2; color: white; }
+table {
+    width: 100%; border-collapse: collapse; margin-top: 20px; background: white; 
+}
+th, td {
+    border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 18px; 
+}
+th {
+    background-color: #4A90E2; color: white; 
+}
 tr:nth-child(even){background-color: #f9f9f9;}
-.vocab-list { max-height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #fff; border-radius: 8px; text-align: left; margin-bottom: 20px; }
-.vocab-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 18px; align-items: center;}
-.vocab-thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 10px; vertical-align: middle; }
+.vocab-list { 
+    max-height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;
+    background: #fff; border-radius: 8px; text-align: left; margin-bottom: 20px; 
+}
+.vocab-item { 
+    display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 18px; align-items: center;
+}
+.vocab-thumb { 
+    width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 10px; vertical-align: middle; 
+}
 
-/* Style cho hiệu ứng bóng bay */
 .balloon {
     position: absolute;
     bottom: -120px;
@@ -158,7 +170,6 @@ tr:nth-child(even){background-color: #f9f9f9;}
     }
 }
 
-/* STYLE MỚI CHO TRẮC NGHIỆM */
 .mcq-btn {
     width: 48%; 
     padding: 15px 10px; 
@@ -204,7 +215,6 @@ tr:nth-child(even){background-color: #f9f9f9;}
     <div id="progressContainer"><div id="progressBar"></div></div>
     <div id="questionCounter"></div>
     
-    <!-- Vùng hiển thị câu hỏi và hình ảnh -->
     <div id="imageContainer" class="question-image-container hidden">
         <img id="questionImage" class="question-image" src="" alt="Vocabulary Image">
     </div>
@@ -212,10 +222,8 @@ tr:nth-child(even){background-color: #f9f9f9;}
     
     <div id="feedback"></div>
 
-    <!-- Ô nhập dành cho tự luận -->
     <input type="text" id="answerInput" placeholder="Type your answer...">
     
-    <!-- Khu vực 4 đáp án dành cho trắc nghiệm (ẩn mặc định) -->
     <div id="mcqContainer" class="hidden" style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; margin-bottom:15px; width: 90%; margin-left: auto; margin-right: auto;">
     </div>
 
@@ -249,7 +257,6 @@ tr:nth-child(even){background-color: #f9f9f9;}
     <div style="background:#eef5fc; padding:20px; border-radius:10px; text-align:left;">
         <h3 style="margin-top:0;">Thêm từ vựng mới:</h3>
         
-        <!-- THÊM: Tùy chọn loại câu hỏi -->
         <select id="newType" onchange="toggleQuestionType()" style="width:95%; margin-bottom: 15px;">
             <option value="text">Loại: Học sinh nhập đáp án (Tự luận)</option>
             <option value="mcq">Loại: Chọn 1 trong 4 (Trắc nghiệm)</option>
@@ -257,10 +264,8 @@ tr:nth-child(even){background-color: #f9f9f9;}
 
         <input type="text" id="newViet" placeholder="Nghĩa tiếng Việt (Ví dụ: lính cứu hỏa)" style="width:95%;">
         
-        <!-- Tự luận -->
         <input type="text" id="newEng" placeholder="Các đáp án tiếng Anh - cách nhau bằng dấu phẩy (Ví dụ: firefighter)" style="width:95%;">
         
-        <!-- Trắc nghiệm (Bị ẩn nếu đang chọn Tự luận) -->
         <div id="mcqInputs" class="hidden">
             <input type="text" id="opt1" placeholder="Nhập Đáp Án ĐÚNG (A)" style="width:95%; border-color:#9ABF17; background:#f9fff9;">
             <input type="text" id="opt2" placeholder="Nhập Đáp Án SAI (B)" style="width:95%;">
@@ -293,7 +298,6 @@ tr:nth-child(even){background-color: #f9f9f9;}
     </div>
 </div>
 
-<!-- Thẻ âm thanh -->
 <audio id="correctSound" preload="auto"><source src="correct.mp3" type="audio/mpeg"></audio>
 <audio id="wrongSound" preload="auto"><source src="wrong.mp3" type="audio/mpeg"></audio>
 <audio id="winnerSound" preload="auto"><source src="winnersound.mp3" type="audio/mpeg"></audio>
@@ -337,17 +341,16 @@ const defaultQuestions = [
 let questions = [...defaultQuestions];
 let currentQuestion=0, score=0, totalWrong=0, timeLeft=30, timer, isPlaying=false, studentName="";
 let isChecked = false;
-let selectedMcqAnswer = ""; // THÊM: Biến lưu đáp án trắc nghiệm học sinh đang chọn
+let selectedMcqAnswer = "";
 
-// THÊM: Hàm ẩn/hiện loại câu hỏi trên form Giáo viên
 function toggleQuestionType() {
     let type = document.getElementById("newType").value;
     if(type === "mcq") {
-        document.getElementById("mcqInputs").classList.remove("hidden");
-        document.getElementById("newEng").classList.add("hidden");
+       document.getElementById("mcqInputs").classList.remove("hidden");
+       document.getElementById("newEng").classList.add("hidden");
     } else {
-        document.getElementById("mcqInputs").classList.add("hidden");
-        document.getElementById("newEng").classList.remove("hidden");
+       document.getElementById("mcqInputs").classList.add("hidden");
+       document.getElementById("newEng").classList.remove("hidden");
     }
 }
 
@@ -452,7 +455,7 @@ function startTimer() {
 function loadQuestion(){
     if (currentQuestion >= questions.length) { finishQuiz(); return; }
     isChecked = false;
-    selectedMcqAnswer = ""; // Đặt lại lựa chọn MCQ
+    selectedMcqAnswer = "";
     document.getElementById("questionCounter").innerHTML="Question "+(currentQuestion+1)+" / "+questions.length;
     
     let currentData = questions[currentQuestion];
@@ -474,14 +477,13 @@ function loadQuestion(){
     let input = document.getElementById("answerInput");
     let mcqContainer = document.getElementById("mcqContainer");
     
-    // THÊM LOGIC PHÂN LOẠI HIỂN THỊ: MCQ HOẶC TỰ LUẬN
     if(currentData.type === "mcq") {
-        input.classList.add("hidden"); // Ẩn ô text
-        mcqContainer.classList.remove("hidden"); // Hiện 4 nút
-        mcqContainer.innerHTML = ""; // Xóa dữ liệu cũ
+        input.classList.add("hidden");
+        mcqContainer.classList.remove("hidden");
+        mcqContainer.innerHTML = "";
         
         let opts = [...currentData.options];
-        shuffleArray(opts); // Tráo đổi vị trí 4 đáp án
+        shuffleArray(opts);
         
         opts.forEach(opt => {
             let btn = document.createElement("button");
@@ -489,7 +491,6 @@ function loadQuestion(){
             btn.innerText = opt;
             btn.onclick = function() {
                 if(isChecked) return;
-                // Bỏ chọn nút khác, highlight nút này
                 document.querySelectorAll('.mcq-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
                 selectedMcqAnswer = opt.toLowerCase();
@@ -497,7 +498,6 @@ function loadQuestion(){
             mcqContainer.appendChild(btn);
         });
     } else {
-        // Tự luận bình thường
         input.classList.remove("hidden");
         mcqContainer.classList.add("hidden");
         input.value=""; 
@@ -528,20 +528,18 @@ function checkAnswer(){
     const feedback = document.getElementById("feedback");
     let isCorrect = false;
 
-    // THÊM LOGIC CHẤM ĐIỂM DỰA TRÊN LOẠI CÂU HỎI
     if(currentData.type === "mcq") {
         let correctAns = currentData.english.toLowerCase();
         if(selectedMcqAnswer === correctAns) {
             isCorrect = true;
         }
         
-        // Hiện màu Xanh/Đỏ cho 4 nút trắc nghiệm
         document.querySelectorAll('.mcq-btn').forEach(b => {
             let btnVal = b.innerText.toLowerCase();
             if(btnVal === correctAns) {
-                b.classList.add('correct-mcq'); // Đáp án đúng tô màu xanh
+                b.classList.add('correct-mcq');
             } else if (b.classList.contains('selected') && btnVal !== correctAns) {
-                b.classList.add('wrong-mcq'); // Nút học sinh lỡ chọn sai thì tô đỏ
+                b.classList.add('wrong-mcq');
             }
             b.disabled = true; 
         });
@@ -636,7 +634,6 @@ function renderVocabList() {
     questions.forEach((q, index) => {
         let qId = q.id ? q.id : index;
         
-        // THÊM: Nếu là trắc nghiệm, hiển thị đáp án theo kiểu mới ở Dashboard GV
         let displayEng = "";
         if (q.type === 'mcq') {
             displayEng = `<span style="color:#E67E22;">[Trắc nghiệm] Đ/Á Đúng: <b>${q.english}</b></span>`;
@@ -664,7 +661,6 @@ async function addQuestion() {
 
     let newEntry = { vietnamese: v, image: img, type: type };
 
-    // Xử lý lưu tuỳ thuộc vào loại câu hỏi giáo viên chọn
     if (type === "text") {
         let e = document.getElementById("newEng").value.trim();
         if(!e) { alert("Vui lòng điền ít nhất đáp án tiếng Anh!"); return; }
@@ -678,8 +674,8 @@ async function addQuestion() {
         if(!o1 || !o2 || !o3 || !o4) { alert("Vui lòng điền đủ 4 đáp án cho câu trắc nghiệm!"); return; }
         if(!v && !img) { alert("Vui lòng điền nghĩa tiếng Việt HOẶC link hình ảnh!"); return; }
         
-        newEntry.english = o1.toLowerCase(); // o1 luôn là đáp án đúng khi lưu
-        newEntry.options = [o1, o2, o3, o4]; // Lưu mảng 4 đáp án để lát nữa tráo đổi lúc xuất
+        newEntry.english = o1.toLowerCase(); 
+        newEntry.options = [o1, o2, o3, o4]; 
     }
 
     try {
@@ -688,7 +684,6 @@ async function addQuestion() {
             body: JSON.stringify(newEntry) 
         });
         
-        // Clear inputs
         document.getElementById("newViet").value = ""; 
         document.getElementById("newEng").value = "";
         document.getElementById("newImg").value = "";
@@ -712,7 +707,9 @@ async function deleteAllQuestions() {
     if(confirm("⚠️ CẢNH BÁO: XÓA TOÀN BỘ từ vựng hiện tại?") && confirm("Hành động không thể hoàn tác!")) {
         try {
             await fetch(`${FIREBASE_URL}/questions.json`, { method: 'DELETE' });
-            questions = []; document.getElementById("totalQuestCount").innerText = 0; renderVocabList();
+            questions = [];
+            document.getElementById("totalQuestCount").innerText = 0;
+            renderVocabList();
             alert("Đã xóa sạch thành công!");
         } catch(err) { alert("Lỗi khi kết nối database."); }
     }
@@ -742,12 +739,10 @@ async function loadAnalytics() {
                 });
             }
         });
-        
         if (attemptsList.length === 0) {
             tbody.innerHTML = "<tr><td colspan='4'>Chưa có dữ liệu học sinh làm bài.</td></tr>"; 
             return; 
         }
-
         let html = "";
         attemptsList.forEach((item, index) => {
             html += `<tr>
@@ -784,7 +779,6 @@ function launchFireworks() {
 
     let particles = [];
     const colors = ['#FF1493', '#00BFFF', '#FFD700', '#32CD32', '#FF4500', '#9400D3'];
-
     class Particle {
         constructor(x, y, color) {
             this.x = x;
@@ -798,7 +792,6 @@ function launchFireworks() {
             this.alpha = 1;
             this.decay = Math.random() * 0.015 + 0.008;
         }
-
         draw() {
             ctx.save();
             ctx.globalAlpha = this.alpha;
@@ -857,20 +850,16 @@ function createBalloons(count) {
     for (let i = 0; i < count; i++) {
         const balloon = document.createElement('div');
         balloon.className = 'balloon';
-        
         const color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
         balloon.style.backgroundColor = color;
         
         const string = document.createElement('div');
         string.className = 'balloon-string';
         balloon.appendChild(string);
-
         balloon.style.left = Math.random() * 85 + 5 + '%';
         balloon.style.animationDuration = (Math.random() * 3 + 4) + 's';
         balloon.style.animationDelay = (Math.random() * 2) + 's';
-
         container.appendChild(balloon);
-
         setTimeout(() => balloon.remove(), 7000);
     }
 }
@@ -879,10 +868,23 @@ document.getElementById("totalQuestCount").innerText = questions.length;
 renderVocabList();
 loadQuestionsFromDatabase();
 
-document.addEventListener("keypress",function(e){
-    // Hỗ trợ phím Enter để nộp bài
-    if(e.key==="Enter" && !document.getElementById("quizScreen").classList.contains("hidden")){ 
-        handleActionButton(); 
+// Hỗ trợ phím Enter để nộp bài / bắt đầu / chuyển câu
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        const quizScreen = document.getElementById("quizScreen");
+        const startScreen = document.getElementById("startScreen");
+
+        if (quizScreen && !quizScreen.classList.contains("hidden")) {
+            e.preventDefault();
+            handleActionButton();
+            return;
+        }
+
+        if (startScreen && !startScreen.classList.contains("hidden")) {
+            e.preventDefault();
+            startGame();
+            return;
+        }
     }
 });
 </script>
